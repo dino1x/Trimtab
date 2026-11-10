@@ -10,7 +10,7 @@ RUN cargo leptos build --release
 FROM debian:bookworm-slim
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
-COPY --from=build /app/target/server/trimtab /app/trimtab
+COPY --from=build /app/target/server/web /app/trimtab
 COPY --from=build /app/target/site /app/site
 ENV LEPTOS_SITE_ROOT=site LEPTOS_SITE_ADDR=0.0.0.0:8080 LEPTOS_ENV=PROD RUST_LOG=info
 EXPOSE 8080

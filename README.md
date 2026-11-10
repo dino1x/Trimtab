@@ -24,6 +24,12 @@
 5. `cargo run -p keeper -- backtest` → the 12-month table above plus month-by-month funding and vault returns.
 6. `cargo run -p keeper -- quote --usdc 25` → a real 1Click `dry: true` quote from USDC to bridged ETH. Nothing moves.
 
+![Hero: the hedge gauge](docs/screenshots/hero-desktop.jpg)
+
+| Vault panels | 375 px |
+|---|---|
+| ![Deposit, position and guardrail cards](docs/screenshots/vault-cards-desktop.jpg) | ![Mobile hero](docs/screenshots/hero-mobile-375.jpg) |
+
 ## Mechanism
 ```
 deposit USDC ─▶ vault contract ─▶ spot leg (Intents 1Click: USDC → eth.bridge.near, held by the contract)
@@ -53,10 +59,10 @@ The sandbox tests (`crates/vault-contract/tests/sandbox.rs`) run the real wasm o
 ## Run it (3 commands)
 ```
 cargo install cargo-leptos cargo-nextest cargo-near   # plus: rustup target add wasm32-unknown-unknown
-cargo nextest run --workspace                          # → unit, keeper, API and sandbox invariant tests
+cargo nextest run --workspace                          # → 84 passed (35 contract unit, 16 sandbox, 32 keeper, 1 web)
 cargo leptos watch                                     # → open :3000, see the gauge
 ```
-No keys and no `.env` are needed. `.env.example` lists the optional settings.
+No keys and no `.env` are needed. `.env.example` lists the optional settings. The first `cargo nextest` run builds both contracts with `cargo near` and downloads the near-workspaces sandbox binary, so it needs network once.
 
 ## Risks
 | Risk | Mitigation |

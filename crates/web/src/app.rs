@@ -92,7 +92,7 @@ fn Home() -> impl IntoView {
                 <div class="glow" aria-hidden="true"></div>
                 <div class="wrap">
                     <p class="eyebrow">"Delta-neutral vault · NEAR"</p>
-                    <h1>"Yield that doesn't care" <br/> "where price goes."</h1>
+                    <h1>"Yield that doesn't care "<br/>"where price goes."</h1>
                     <p class="lede">
                         "Deposit USDC. The vault buys spot ETH through NEAR Intents and opens an equal short perp through Chain Signatures. "
                         "Price moves cancel out; funding paid to shorts is the yield. A NEAR contract holds the guardrails."
@@ -123,9 +123,14 @@ fn Home() -> impl IntoView {
                 <div class="wrap">
                     <p class="eyebrow">"The vault"</p>
                     <h2>"Three panels, one position."</h2>
-                    <Transition fallback=|| view! { <div class="cards"><div class="card sk"></div><div class="card sk"></div><div class="card sk"></div></div> }>
-                        {view_dash(|d| view! { <Cards snap=d.snap/> }.into_any())}
-                    </Transition>
+                    <div class="cards">
+                        <DepositCard pps=Signal::derive(move || {
+                            dash.get().and_then(|r| r.ok()).map(|d| d.snap.price_per_share).unwrap_or(1.0)
+                        })/>
+                        <Transition fallback=|| view! { <div class="card sk"></div><div class="card sk"></div> }>
+                            {view_dash(|d| view! { <Cards snap=d.snap/> }.into_any())}
+                        </Transition>
+                    </div>
                 </div>
             </section>
 
@@ -183,7 +188,7 @@ fn Nav(loading: bool, snap: Snap) -> impl IntoView {
         <nav class="pill" aria-label="Main">
             <a class="brand" href="/">
                 <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 15a9 9 0 0 1 18 0" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M12 15l4-6" stroke="currentColor" stroke-width="1.6"/></svg>
-                "Trimtab"
+                <span>"Trimtab"</span>
             </a>
             <div class="chips mono">
                 <i title="Backtest APR over the last 7 replayed days">"APY 7d "<b>{apy}</b></i>
@@ -211,6 +216,9 @@ fn Hero(d: Dash) -> impl IntoView {
     let (cx, cy, r) = (300.0, 300.0, 240.0);
     let nx = cx + r * ang.cos();
     let ny = cy - r * ang.sin();
+    // The needle starts at an inner radius so the readout under the arc stays clear.
+    let ix = cx + (r - 64.0) * ang.cos();
+    let iy = cy - (r - 64.0) * ang.sin();
     let band_a = std::f64::consts::PI * (1.0 - (0.5 + 1.0) / 2.0);
     let band_b = std::f64::consts::PI * (1.0 - (-0.5 + 1.0) / 2.0);
     let arc = |a0: f64, a1: f64, rr: f64| {
@@ -229,7 +237,7 @@ fn Hero(d: Dash) -> impl IntoView {
                 <path d=arc(0.0, std::f64::consts::PI, r) class="track"/>
                 <path d=arc(band_a, band_b, r) class="band-glow" filter="url(#g)"/>
                 <path d=arc(band_a, band_b, r) class="band"/>
-                <line x1=cx y1=cy x2=format!("{nx:.1}") y2=format!("{ny:.1}") class="needle"/>
+                <line x1=format!("{ix:.1}") y1=format!("{iy:.1}") x2=format!("{nx:.1}") y2=format!("{ny:.1}") class="needle"/>
                 <circle cx=format!("{nx:.1}") cy=format!("{ny:.1}") r="7" class="tip"/>
                 <text x="60" y="324" class="tick">{format!("−{:.0} bps", span)}</text>
                 <text x="540" y="324" class="tick" text-anchor="end">{format!("+{:.0} bps", span)}</text>
@@ -273,24 +281,17 @@ fn Bars(bt: Bt) -> impl IntoView {
 }
 
 #[component]
-fn Cards(snap: Snap) -> impl IntoView {
-    let s = snap;
+fn DepositCard(pps: Signal<f64>) -> impl IntoView {
     let (account, set_account) = signal(String::from(""));
     let (amount, set_amount) = signal(String::from("100"));
     let deposit = ServerAction::<DemoDeposit>::new();
     let pending = deposit.pending();
     let result = deposit.value();
-    let pps = s.price_per_share;
     let preview = move || {
-        amount.get().parse::<f64>().ok().filter(|v| *v > 0.0).map(|v| format!("≈ {:.4} shares at {:.6} USDC/share", v / pps, pps))
+        amount.get().parse::<f64>().ok().filter(|v| *v > 0.0).map(|v| { let p = pps.get(); format!("≈ {:.4} shares at {:.6} USDC/share", v / p, p) })
             .unwrap_or_else(|| "Enter an amount".into())
     };
-    let spot_val = s.spot_qty * s.px;
-    let short_val = s.short_qty * s.px;
-    let maxv = spot_val.max(short_val).max(1.0);
-    let rebal = format!("{}/{}", s.epoch_rebalances, s.max_rebalances_per_epoch);
     view! {
-        <div class="cards">
             <article class="card">
                 <header><h3>"Deposit"</h3><span class="tag mono">"DEMO VAULT"</span></header>
                 <form class="ui" on:submit=move |ev| {
@@ -313,7 +314,17 @@ fn Cards(snap: Snap) -> impl IntoView {
                 </form>
                 <p class="cap">"Real vault: one ft_transfer_call of USDC with msg \"deposit\". Here the keeper's demo vault runs the contract's share math."</p>
             </article>
+    }
+}
 
+#[component]
+fn Cards(snap: Snap) -> impl IntoView {
+    let s = snap;
+    let spot_val = s.spot_qty * s.px;
+    let short_val = s.short_qty * s.px;
+    let maxv = spot_val.max(short_val).max(1.0);
+    let rebal = format!("{}/{}", s.epoch_rebalances, s.max_rebalances_per_epoch);
+    view! {
             <article class="card">
                 <header><h3>"Position"</h3><span class="tag mono">{format!("ETH {}", fmt_usd(s.px))}</span></header>
                 <div class="legs">
@@ -345,7 +356,6 @@ fn Cards(snap: Snap) -> impl IntoView {
                 </ul>
                 <p class="cap">"The contract hashes every perp order itself before Chain Signatures signs it. A keeper can only trade inside these lines."</p>
             </article>
-        </div>
     }
 }
 
