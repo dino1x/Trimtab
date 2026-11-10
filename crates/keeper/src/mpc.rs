@@ -4,7 +4,6 @@
 
 use anyhow::{bail, Context, Result};
 use k256::ecdsa::{RecoveryId, Signature, VerifyingKey};
-use k256::elliptic_curve::sec1::ToEncodedPoint;
 use k256::elliptic_curve::PrimeField;
 use k256::{AffinePoint, ProjectivePoint, Scalar};
 use sha3::{Digest, Keccak256, Sha3_256};
@@ -105,9 +104,9 @@ mod tests {
     /// signed with key 0x0123..23 on mainnet.
     #[test]
     fn venue_order_signature_matches_reference_vector() {
-        use vault_contract::hl::*;
-        let sk = k256::ecdsa::SigningKey::from_bytes(
-            &hex::decode("0123456789012345678901234567890123456789012345678901234567890123").unwrap()[..].try_into().unwrap(),
+        use crate::hl::*;
+        let sk = k256::ecdsa::SigningKey::from_slice(
+            &hex::decode("0123456789012345678901234567890123456789012345678901234567890123").unwrap(),
         )
         .unwrap();
         let o = OrderWire { asset: 1, is_buy: true, px: "100".into(), sz: "100".into(), reduce_only: false, tif: Tif::Gtc };

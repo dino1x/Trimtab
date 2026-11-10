@@ -109,10 +109,10 @@ impl PerpVenue for Hyperliquid {
 }
 
 /// JSON form of the order action, identical in content to what the contract hashed.
-pub fn order_action_json(o: &vault_contract::hl::OrderWire) -> serde_json::Value {
+pub fn order_action_json(o: &crate::hl::OrderWire) -> serde_json::Value {
     let tif = match o.tif {
-        vault_contract::hl::Tif::Ioc => "Ioc",
-        vault_contract::hl::Tif::Gtc => "Gtc",
+        crate::hl::Tif::Ioc => "Ioc",
+        crate::hl::Tif::Gtc => "Gtc",
     };
     serde_json::json!({
         "type": "order",

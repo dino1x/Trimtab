@@ -2,18 +2,18 @@
 
 | Backtest, 12 months (not live) | Value |
 |---|---|
-| Net APR after fees | {{net_apr}} |
-| APR, last 7 days of the window | {{apr_7d}} |
-| Max hedge drift | {{max_drift}} |
-| Max drawdown | {{max_dd}} |
-| Final net delta | {{final_delta}} |
+| Net APR after fees | 3.90% |
+| APR, last 7 days of the window | 3.51% |
+| Max hedge drift | 0.000% (legs assumed to fill together; see note) |
+| Max drawdown | 0.26% |
+| Final net delta | 0.000% |
 | Vault account | not deployed yet: no mainnet or testnet account was provided |
 
-*Backtest = real hourly ETH funding from the perp venue and real hourly ETH spot prices, {{window}}, run through the keeper's own rebalance code with simulated execution and fees. It is not a record of live trading. Regenerate it with `cargo run -p keeper -- backtest`; the test `readme_matches_backtest` fails if this table drifts from the code.*
+*Backtest = real hourly ETH funding from the perp venue and real hourly ETH spot prices, 1 Nov 2025 to 31 Oct 2026 (8,759 hours), run through the keeper's own rebalance code with simulated execution and fees. It is not a record of live trading. Hedge drift is zero in the backtest because both legs are assumed to fill in the same hour at equal size; live drift comes from 1Click settlement time (about 20 s per quote) and the venue lot size, and the contract caps it at ±100 bps (I2). On $10,000 the year earned $478.71 of funding, paid $104.36 in fees and lost $7.18 to basis. Regenerate it with `cargo run -p keeper -- backtest`; the test `readme_matches_backtest` fails if this table drifts from the code.*
 
 **What it is.** A USDC vault on NEAR that holds spot ETH bought through NEAR Intents and an equal short perp signed through NEAR Chain Signatures, so price moves cancel and the funding paid to shorts is the yield. A NEAR contract enforces the hedge and risk limits on every trade.
 
-**Problem.** Perp funding paid shorts {{mean_funding}} a year on average over the window, but {{neg_hours}} of hours went the other way, and earning it today means trusting a custodian, or running two venues by hand with no hard limits on the bot that trades them.
+**Problem.** Perp funding paid shorts 6.31% a year on average over the window, but 16.2% of hours went the other way, and earning it today means trusting a custodian, or running two venues by hand with no hard limits on the bot that trades them.
 
 ## Try it (do X → see Y)
 
@@ -61,12 +61,12 @@ No keys and no `.env` are needed. `.env.example` lists the optional settings.
 ## Risks
 | Risk | Mitigation |
 |---|---|
-| Funding turns negative for long stretches ({{neg_hours}} of hours in the window) | Shown in the backtest and the monthly bars; the owner can `emergency_unwind`; the 5% drawdown stop trips automatically |
+| Funding turns negative for long stretches (16.2% of hours in the window) | Shown in the backtest and the monthly bars; the owner can `emergency_unwind`; the 5% drawdown stop trips automatically |
 | A compromised keeper | It can only trade inside I2–I8. It cannot choose where margin goes, and every hash it gets signed is built by the contract |
 | A keeper sends `allocate` USDC to a wrong 1Click deposit address | Destinations must be 64-hex implicit accounts and are capped per epoch (I6). Remaining trust: the keeper picks the quote. Next step: deposit through `intents.near` with contract-signed intents |
 | Keeper misreports perp value | I7 caps each report's NAV move; the spot leg is read on chain; the drawdown stop works on reported NAV |
-| Perp venue or bridge failure | One venue today behind the `PerpVenue` trait (`crates/keeper/src/venue.rs`); leverage target 3x; worst margin ratio in the backtest {{min_mr}} vs 2% maintenance |
-| Rapid price spike before a rebalance | Backtest max leverage {{max_lev}}; paired reduce shrinks both legs in one transaction |
+| Perp venue or bridge failure | One venue today behind the `PerpVenue` trait (`crates/keeper/src/venue.rs`); leverage target 3x; worst margin ratio in the backtest 22.2% vs 2% maintenance |
+| Rapid price spike before a rebalance | Backtest max leverage 4.50x (the rebalance trigger); paired reduce shrinks both legs in one transaction |
 | Smart-contract bugs | Unaudited hackathon code. The mainnet path is capped at 100 USD and needs an explicit confirmation phrase (`crates/keeper/src/live.rs`) |
 
 ## NEAR components

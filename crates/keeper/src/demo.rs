@@ -6,7 +6,7 @@
 use crate::backtest::{Report, Snapshot};
 use serde::Serialize;
 use std::collections::BTreeMap;
-use vault_contract::math;
+use crate::math;
 
 pub const DEMO_LABEL: &str = "DEMO: simulated vault replaying backtest hours; no funds move";
 const USDC: f64 = 1_000_000.0;

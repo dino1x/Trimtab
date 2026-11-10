@@ -166,13 +166,13 @@ async fn submit_last_signed(cfg: &LiveConfig, http: &reqwest::Client, venue: &Hy
     let sig = mpc::verify_response(&sig_json, &digest, &derived)?;
     let o = &rec["kind"]["PerpOrder"];
     let e8 = |v: &Value| v.as_str().unwrap_or("0").parse::<u128>().unwrap_or(0);
-    let wire = vault_contract::hl::OrderWire {
+    let wire = crate::hl::OrderWire {
         asset: config["perp_asset"].as_u64().unwrap_or(1) as u32,
         is_buy: o["order"]["is_buy"].as_bool().unwrap_or(false),
-        px: vault_contract::hl::e8_to_wire(e8(&o["order"]["limit_px_e8"])),
-        sz: vault_contract::hl::e8_to_wire(e8(&o["order"]["sz_e8"])),
+        px: crate::hl::e8_to_wire(e8(&o["order"]["limit_px_e8"])),
+        sz: crate::hl::e8_to_wire(e8(&o["order"]["sz_e8"])),
         reduce_only: o["order"]["reduce_only"].as_bool().unwrap_or(false),
-        tif: vault_contract::hl::Tif::Ioc,
+        tif: crate::hl::Tif::Ioc,
     };
     let resp = venue.submit_order(order_action_json(&wire), e8(&o["nonce"]) as u64, &sig).await?;
     println!("venue response: {resp}");
