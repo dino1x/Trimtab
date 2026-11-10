@@ -1,0 +1,36 @@
+[package]
+name = "keeper"
+description = "Trimtab keeper: reads positions and funding, decides rebalances, requests signatures, serves the API"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "trimtab-keeper"
+path = "src/main.rs"
+
+[dependencies]
+vault-contract = { path = "../vault-contract" }
+axum = "0.8"
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+clap = { version = "4", features = ["derive", "env"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+k256 = { workspace = true, features = ["ecdsa", "arithmetic", "std"] }
+sha3 = { workspace = true, features = ["std"] }
+hex = { workspace = true }
+async-trait = "0.1"
+dotenvy = "0.15"
+near-api = "0.8"
+
+[dev-dependencies]
+tower = { version = "0.5", features = ["util"] }
+http-body-util = "0.1"
+sandbox-fixtures = { path = "../sandbox-fixtures" }

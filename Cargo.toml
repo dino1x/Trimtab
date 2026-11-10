@@ -1,0 +1,65 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/vault-contract",
+    "crates/keeper",
+    "crates/web",
+    "crates/sandbox-fixtures",
+]
+
+[workspace.package]
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/trimtab-vault/trimtab"
+rust-version = "1.86"
+
+[workspace.dependencies]
+near-sdk = "5.30"
+near-contract-standards = "5.30"
+near-workspaces = { version = "0.24", default-features = false }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+k256 = { version = "0.13", default-features = false }
+sha3 = { version = "0.10", default-features = false }
+hex = "0.4"
+tokio = { version = "1", features = ["full"] }
+anyhow = "1"
+
+# Contract-friendly release profile (cargo-near builds with it).
+[profile.release]
+codegen-units = 1
+opt-level = "z"
+lto = true
+debug = false
+panic = "abort"
+overflow-checks = true
+
+# Server binary for Fly: fast code, still checked arithmetic.
+[profile.server]
+inherits = "release"
+opt-level = 3
+panic = "unwind"
+
+# Hydrate bundle for the browser.
+[profile.wasm-release]
+inherits = "release"
+opt-level = "z"
+
+[[workspace.metadata.leptos]]
+name = "trimtab"
+bin-package = "web"
+lib-package = "web"
+output-name = "trimtab"
+site-root = "target/site"
+site-pkg-dir = "pkg"
+style-file = "crates/web/style/main.css"
+assets-dir = "crates/web/public"
+site-addr = "127.0.0.1:3000"
+reload-port = 3001
+bin-features = ["ssr"]
+bin-default-features = false
+lib-features = ["hydrate"]
+lib-default-features = false
+lib-profile-release = "wasm-release"
+bin-profile-release = "server"
+env = "DEV"
