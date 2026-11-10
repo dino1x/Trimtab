@@ -270,6 +270,22 @@ mod tests {
         assert_eq!(month_of(1_793_491_199_000), "2026-10");
     }
 
+    /// The README's headline table must be the backtest's own output.
+    #[test]
+    fn readme_matches_backtest() {
+        let r = default_report().unwrap();
+        let readme = include_str!("../../../README.md");
+        for (name, want) in [
+            ("Net APR after fees", format!("{:.2}%", r.net_apr_pct)),
+            ("APR, last 7 days of the window", format!("{:.2}%", r.apr_7d_pct)),
+            ("Max hedge drift", format!("{:.3}%", r.max_drift_pct)),
+            ("Max drawdown", format!("{:.2}%", r.max_drawdown_pct)),
+        ] {
+            let row = readme.lines().find(|l| l.starts_with(&format!("| {name} |"))).expect(name);
+            assert!(row.contains(&want), "README row '{row}' should say {want}");
+        }
+    }
+
     #[test]
     fn real_data_backtest_is_sane() {
         let r = default_report().unwrap();

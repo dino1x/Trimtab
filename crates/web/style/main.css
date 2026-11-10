@@ -109,8 +109,8 @@ h3{font-size:20px;letter-spacing:-.4px}
 .code{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:24px;font-size:13px;line-height:1.7;color:var(--muted);overflow-x:auto;min-height:260px}
 
 /* States */
-.sk{background:linear-gradient(90deg,var(--panel) 0%,var(--panel-2) 50%,var(--panel) 100%);background-size:200% 100%;animation:sk 1.4s linear infinite;border-radius:16px}
-@keyframes sk{to{background-position:-200% 0}}
+.sk{background:var(--panel-2);animation:sk 1.4s ease-in-out infinite alternate;border-radius:16px}
+@keyframes sk{from{opacity:.45}to{opacity:1}}
 @media (prefers-reduced-motion:reduce){.sk{animation:none}}
 .err{background:rgba(240,163,163,.08);border:1px solid rgba(240,163,163,.3);color:var(--fg);border-radius:12px;padding:14px 16px;margin:24px auto;max-width:620px;font-size:14px;text-align:left}
 

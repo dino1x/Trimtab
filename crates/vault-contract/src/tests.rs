@@ -1,5 +1,6 @@
 //! Unit tests run against near-sdk's mocked blockchain. The same invariants
 //! are exercised end to end in `tests/sandbox.rs`.
+#![allow(unused_must_use)]
 
 use super::*;
 use near_sdk::test_utils::{get_logs, VMContextBuilder};
@@ -63,13 +64,14 @@ fn order(is_buy: bool, sz_eth_e8: u128, reduce_only: bool) -> PerpOrder {
 #[test]
 fn deposit_mints_one_to_one_then_pro_rata() {
     let mut v = vault();
-    deposit(&mut v, "alice.near", 10_000_000);
-    assert_eq!(v.shares_of(acc("alice.near")).0, 10_000_000);
-    // NAV doubles: new depositor gets half the shares per USDC.
-    v.deployed = 10_000_000;
-    deposit(&mut v, "bob.near", 10_000_000);
+    deposit(&mut v, "alice.near", 10_000_000_000);
+    assert_eq!(v.shares_of(acc("alice.near")).0, 10_000_000_000);
+    // NAV doubles: a new depositor gets about half the shares per USDC
+    // (the 1-USDC virtual offset shifts it by a hair).
+    v.deployed = 10_000_000_000;
+    deposit(&mut v, "bob.near", 10_000_000_000);
     let bob = v.shares_of(acc("bob.near")).0;
-    assert!(bob <= 5_000_000 && bob > 4_990_000, "bob={bob}");
+    assert!(bob >= 5_000_000_000 && bob < 5_001_000_000, "bob={bob}");
 }
 
 #[test]

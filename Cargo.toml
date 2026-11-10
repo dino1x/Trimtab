@@ -2,8 +2,8 @@
 resolver = "2"
 members = [
     "crates/vault-contract",
-#    "crates/keeper",
-#    "crates/web",
+    "crates/keeper",
+    "crates/web",
     "crates/sandbox-fixtures",
 ]
 
