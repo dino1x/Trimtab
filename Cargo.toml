@@ -2,15 +2,14 @@
 resolver = "2"
 members = [
     "crates/vault-contract",
-    "crates/keeper",
-    "crates/web",
+#    "crates/keeper",
+#    "crates/web",
     "crates/sandbox-fixtures",
 ]
 
 [workspace.package]
 edition = "2021"
 license = "MIT"
-repository = "https://github.com/trimtab-vault/trimtab"
 rust-version = "1.86"
 
 [workspace.dependencies]

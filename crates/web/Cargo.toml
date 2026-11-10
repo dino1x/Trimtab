@@ -1,0 +1,38 @@
+[package]
+name = "web"
+description = "Trimtab web app: Leptos SSR + hydration, serves the keeper API from the same process"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[[bin]]
+name = "trimtab"
+path = "src/main.rs"
+
+[dependencies]
+leptos = { version = "0.8" }
+leptos_meta = { version = "0.8" }
+leptos_router = { version = "0.8" }
+leptos_axum = { version = "0.8", optional = true }
+axum = { version = "0.8", optional = true }
+tokio = { workspace = true, optional = true }
+keeper = { path = "../keeper", optional = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+console_error_panic_hook = { version = "0.1", optional = true }
+wasm-bindgen = { version = "0.2", optional = true }
+
+[features]
+hydrate = ["leptos/hydrate", "dep:console_error_panic_hook", "dep:wasm-bindgen"]
+ssr = [
+    "dep:axum",
+    "dep:tokio",
+    "dep:leptos_axum",
+    "dep:keeper",
+    "leptos/ssr",
+    "leptos_meta/ssr",
+    "leptos_router/ssr",
+]
