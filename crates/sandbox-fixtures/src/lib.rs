@@ -12,7 +12,6 @@ use near_contract_standards::fungible_token::core::FungibleTokenCore;
 use near_contract_standards::fungible_token::resolver::FungibleTokenResolver;
 use near_contract_standards::fungible_token::FungibleToken;
 use near_sdk::json_types::U128;
-use near_sdk::serde::Deserialize;
 use near_sdk::serde_json::{json, Value};
 use near_sdk::{env, near, require, AccountId, NearToken, PanicOnDefault, PromiseOrValue};
 use sha3::{Digest, Sha3_256};
@@ -30,16 +29,14 @@ pub struct Fixture {
     signed: u64,
 }
 
-#[derive(Deserialize)]
-#[serde(crate = "near_sdk::serde")]
+#[near(serializers = [json])]
 pub struct SignRequest {
     pub payload_v2: Payload,
     pub path: String,
     pub domain_id: u64,
 }
 
-#[derive(Deserialize)]
-#[serde(crate = "near_sdk::serde")]
+#[near(serializers = [json])]
 pub enum Payload {
     Ecdsa(String),
 }

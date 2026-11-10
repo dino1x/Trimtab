@@ -29,6 +29,33 @@ struct Env {
     vault: Contract,
 }
 
+/// Builds a contract crate with the installed `cargo near` CLI (once per test
+/// process) and returns its wasm.
+fn wasm(crate_dir: &str, name: &str) -> Result<Vec<u8>> {
+    use std::sync::Mutex;
+    static LOCK: Mutex<()> = Mutex::new(());
+    let _g = LOCK.lock().unwrap();
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let out = root.join(format!("target/near/{name}/{name}.wasm"));
+    let src = root.join(format!("crates/{crate_dir}"));
+    let stale = match (std::fs::metadata(&out), newest(&src.join("src"))) {
+        (Ok(m), Some(t)) => m.modified()? < t,
+        _ => true,
+    };
+    if stale {
+        let st = std::process::Command::new("cargo")
+            .args(["near", "build", "non-reproducible-wasm", "--no-abi"])
+            .current_dir(&src)
+            .status()?;
+        anyhow::ensure!(st.success(), "cargo near build failed for {crate_dir}");
+    }
+    Ok(std::fs::read(out)?)
+}
+
+fn newest(dir: &std::path::Path) -> Option<std::time::SystemTime> {
+    std::fs::read_dir(dir).ok()?.filter_map(|e| e.ok()?.metadata().ok()?.modified().ok()).max()
+}
+
 fn implicit(n: u8) -> String {
     hex::encode([n; 32])
 }
@@ -45,8 +72,8 @@ async fn sub(worker: &Worker<Sandbox>, name: &str) -> Result<Account> {
 
 async fn setup_with(config: Value) -> Result<Env> {
     let worker = near_workspaces::sandbox().await?;
-    let vault_wasm = near_workspaces::compile_project("./").await?;
-    let fixture_wasm = near_workspaces::compile_project("../sandbox-fixtures").await?;
+    let vault_wasm = wasm("vault-contract", "vault_contract")?;
+    let fixture_wasm = wasm("sandbox-fixtures", "sandbox_fixtures")?;
 
     let owner = sub(&worker, "owner").await?;
     let keeper = sub(&worker, "keeper").await?;
@@ -225,7 +252,7 @@ async fn i1_shares_rejects_wrong_token_and_dust() -> Result<()> {
     let env = setup().await?;
     // Below the 1 USDC minimum: refunded by the token's resolve step.
     let before = ft_balance(&env.usdc, env.alice.id().as_str()).await?;
-    deposit(&env, &env.alice, 10).await?;
+    let _ = deposit(&env, &env.alice, 10).await?;
     assert_eq!(ft_balance(&env.usdc, env.alice.id().as_str()).await?, before);
     // A different token calling ft_on_transfer is refused.
     env.eth.call("mint").args_json(json!({"account_id": env.mallory.id(), "amount": "1000000"})).transact().await?.into_result()?;
@@ -402,7 +429,7 @@ async fn i3_drawdown_switches_vault_to_unwind_only() -> Result<()> {
     assert!(r.is_success(), "{:?}", r.failures());
     // Deposits are closed while unwinding.
     let before = ft_balance(&env.usdc, env.alice.id().as_str()).await?;
-    deposit(&env, &env.alice, 10 * USDC).await?;
+    let _ = deposit(&env, &env.alice, 10 * USDC).await?;
     assert_eq!(ft_balance(&env.usdc, env.alice.id().as_str()).await?, before);
     Ok(())
 }

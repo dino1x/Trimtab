@@ -915,7 +915,7 @@ impl Vault {
 
     fn pay(&mut self, account: AccountId, amount: u128) {
         self.idle -= amount;
-        ext_ft::ext(self.usdc.clone())
+        let _ = ext_ft::ext(self.usdc.clone())
             .with_attached_deposit(ONE_YOCTO)
             .with_static_gas(GAS_FT_TRANSFER)
             .ft_transfer(account.clone(), U128(amount), Some("trimtab:withdraw".into()))
