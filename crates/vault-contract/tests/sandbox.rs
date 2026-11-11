@@ -579,3 +579,113 @@ async fn margin_withdraw_destination_is_fixed() -> Result<()> {
     let _ = &env.owner;
     Ok(())
 }
+
+// ---------------------------------------------------------------- try to break it
+
+struct Tally {
+    rows: Vec<(String, bool, String)>,
+}
+
+impl Tally {
+    fn check(&mut self, attack: &str, r: &ExecutionFinalResult, expect: &str) {
+        let refused = failed_with(r, expect);
+        self.rows.push((attack.to_string(), refused, expect.to_string()));
+    }
+}
+
+/// Fires real attacks at a hedged vault on the sandbox. Every one must be
+/// refused by the contract, and the vault's money must be where it was.
+#[tokio::test]
+async fn break_it_every_attack_is_refused() -> Result<()> {
+    let env = setup().await?;
+    hedge(&env, 1).await?;
+    let before = state(&env).await?;
+    let usdc_before = ft_balance(&env.usdc, env.vault.id().as_str()).await?;
+    let eth_before = ft_balance(&env.eth, env.vault.id().as_str()).await?;
+    let mut t = Tally { rows: vec![] };
+    let px = (2_000 * E8).to_string();
+    let now = now_ms(&env).await?;
+    let m = &env.mallory;
+    let v = env.vault.id();
+
+    // Outsiders.
+    let r = m.call(v, "allocate").args_json(json!({"leg": "Spot", "amount": "1000000", "deposit_address": implicit(1)})).max_gas().transact().await?;
+    t.check("stranger moves USDC out", &r, "only keeper");
+    let r = m.call(v, "request_perp_order").args_json(json!({"order": {"is_buy": true, "sz_e8": "1000", "limit_px_e8": px, "reduce_only": true}, "nonce": (now + 1).to_string()})).deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?;
+    t.check("stranger asks the MPC network to sign", &r, "only keeper");
+    let r = m.call(v, "add_keeper").args_json(json!({"account_id": m.id()})).transact().await?;
+    t.check("stranger adds itself as keeper", &r, "only owner");
+    let r = m.call(v, "on_signed").args_json(json!({"id": 0})).max_gas().transact().await?;
+    t.check("stranger calls a private callback", &r, "is private");
+    let r = m.call(v, "withdraw").args_json(json!({"shares": "1"})).max_gas().transact().await?;
+    t.check("withdraw shares you do not own", &r, "not enough shares");
+    let r = m.call(v, "ft_on_transfer").args_json(json!({"sender_id": m.id(), "amount": "1000000000", "msg": "deposit"})).transact().await?;
+    t.check("mint shares with a fake token transfer", &r, "only USDC deposits");
+
+    // A keeper going rogue.
+    let r = keeper_call(&env, "allocate", json!({"leg": "Spot", "amount": "1000000", "deposit_address": m.id()}), 0).await?;
+    t.check("keeper sends USDC to a named account", &r, "deposit address must be an implicit account");
+    let r = keeper_call(&env, "request_perp_order", json!({"order": {"is_buy": false, "sz_e8": (E8 / 2).to_string(), "limit_px_e8": px, "reduce_only": false}, "nonce": (now + 2).to_string()}), 1).await?;
+    t.check("keeper shorts 50% more than the spot leg", &r, "order breaks the hedge band");
+    let r = keeper_call(&env, "request_perp_order", json!({"order": {"is_buy": true, "sz_e8": (2 * E8).to_string(), "limit_px_e8": px, "reduce_only": true}, "nonce": (now + 3).to_string()}), 1).await?;
+    t.check("keeper flips the vault net long", &r, "buy would flip the vault long");
+    let r = keeper_call(&env, "request_perp_order", json!({"order": {"is_buy": true, "sz_e8": "100000", "limit_px_e8": (1_500 * E8).to_string(), "reduce_only": true}, "nonce": (now + 4).to_string()}), 1).await?;
+    t.check("keeper trades 25% off market to a friend", &r, "limit price too far from mark");
+    let ok = keeper_call(&env, "request_perp_order", json!({"order": {"is_buy": true, "sz_e8": "100000", "limit_px_e8": px, "reduce_only": true}, "nonce": (now + 5).to_string()}), 1).await?;
+    assert!(ok.is_success(), "a valid order must still pass: {:?}", ok.failures());
+    let r = keeper_call(&env, "request_perp_order", json!({"order": {"is_buy": false, "sz_e8": "100000", "limit_px_e8": px, "reduce_only": false}, "nonce": (now + 5).to_string()}), 1).await?;
+    t.check("keeper replays a signed nonce", &r, "nonce must increase");
+    let r = keeper_call(&env, "report", json!({"deployed_value": (u(&before["deployed"]) * 2).to_string(), "perp_short_e8": E8.to_string(), "mark_px_e8": px}), 0).await?;
+    t.check("keeper inflates NAV to drain withdrawals", &r, "nav move exceeds per-report limit");
+    let r = env.keeper.call(v, "set_config").args_json(json!({"config": default_config()})).transact().await?;
+    t.check("keeper loosens the risk limits", &r, "only owner");
+    let r = env.keeper.call(v, "add_keeper").args_json(json!({"account_id": m.id()})).transact().await?;
+    t.check("keeper adds an accomplice", &r, "only owner");
+
+    // Over-limit rebalancing: burn the epoch's order budget, then one more.
+    let mut n = 10;
+    loop {
+        let r = keeper_call(&env, "request_perp_order", json!({"order": {"is_buy": n % 2 == 0, "sz_e8": "100000", "limit_px_e8": px, "reduce_only": n % 2 == 0}, "nonce": (now + n).to_string()}), 1).await?;
+        n += 1;
+        if !r.is_success() {
+            t.check("keeper exceeds the per-epoch rebalance limit", &r, "epoch rebalance limit");
+            break;
+        }
+        assert!(n < 20, "rebalance limit never hit");
+    }
+
+    // The owner, too.
+    let mut cfg = default_config();
+    cfg["perp_evm_address"] = json!("0x2222222222222222222222222222222222222222");
+    let r = env.owner.call(v, "set_config").args_json(json!({"config": cfg})).transact().await?;
+    t.check("owner redirects margin withdrawals to a new address", &r, "destinations are frozen");
+    let mut cfg = default_config();
+    cfg["hedge_band_bps"] = json!(5_000);
+    let r = env.owner.call(v, "set_config").args_json(json!({"config": cfg})).transact().await?;
+    t.check("owner sets a 50% hedge band", &r, "hedge band out of range");
+
+    // Paused vault.
+    env.keeper.call(v, "pause").transact().await?.into_result()?;
+    let r = keeper_call(&env, "request_perp_order", json!({"order": {"is_buy": true, "sz_e8": "100000", "limit_px_e8": px, "reduce_only": true}, "nonce": (now + 100).to_string()}), 1).await?;
+    t.check("keeper trades while paused", &r, "vault is paused");
+    let r = deposit(&env, &env.mallory, 10 * USDC).await?;
+    let refunded = ft_balance(&env.usdc, m.id().as_str()).await? == 100_000 * USDC;
+    t.rows.push(("deposit into a paused vault".into(), refunded, "refunded by the token".into()));
+    let _ = r;
+
+    // Nothing moved except the one valid order's bookkeeping.
+    assert_eq!(ft_balance(&env.usdc, v.as_str()).await?, usdc_before);
+    assert_eq!(ft_balance(&env.eth, v.as_str()).await?, eth_before);
+
+    let total = t.rows.len();
+    let refused = t.rows.iter().filter(|r| r.1).count();
+    let mut report = format!("# Try to break it: {refused} of {total} refused\n\n| Attack | Refused | Contract says |\n|---|---|---|\n");
+    for (a, ok, why) in &t.rows {
+        report.push_str(&format!("| {a} | {} | `{why}` |\n", if *ok { "yes" } else { "NO" }));
+    }
+    println!("{report}");
+    let out = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../target/break-it-report.md");
+    std::fs::write(out, &report)?;
+    assert_eq!(refused, total, "{report}");
+    Ok(())
+}

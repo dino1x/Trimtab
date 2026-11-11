@@ -40,6 +40,7 @@ const NS_PER_SEC: u64 = 1_000_000_000;
 pub const MAX_HEDGE_BAND_BPS: u32 = 500;
 pub const MAX_DRAWDOWN_LIMIT_BPS: u32 = 2_000;
 pub const MAX_NAV_MOVE_LIMIT_BPS: u32 = 1_000;
+pub const ZERO_ADDRESS: &str = "0x0000000000000000000000000000000000000000";
 
 #[near(serializers = [json, borsh])]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -733,9 +734,26 @@ impl Vault {
         self.keepers.remove(&account_id);
     }
 
+    /// Risk limits can be tuned inside the hard caps. Where money can go cannot:
+    /// once the derived EVM address is set (it starts as zero), the payout
+    /// destinations, signing path and venue are frozen, even for the owner.
     pub fn set_config(&mut self, config: Config) {
         self.assert_owner();
         config.validate();
+        let c = &self.config;
+        if c.perp_evm_address != ZERO_ADDRESS {
+            require!(
+                config.perp_evm_address == c.perp_evm_address
+                    && config.settlement_usdc == c.settlement_usdc
+                    && config.venue_bridge == c.venue_bridge
+                    && config.settlement_chain_id == c.settlement_chain_id
+                    && config.mpc_path == c.mpc_path
+                    && config.mpc_domain_id == c.mpc_domain_id
+                    && config.perp_asset == c.perp_asset
+                    && config.venue_mainnet == c.venue_mainnet,
+                "destinations are frozen"
+            );
+        }
         self.config = config;
     }
 

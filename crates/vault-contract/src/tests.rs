@@ -303,3 +303,20 @@ fn digest_matches_pure_function() {
     let expected = hex::encode(hl::order_digest(&wire, T0_MS, true, keccak));
     assert_eq!(v.signs.get(0).unwrap().digest, expected);
 }
+
+#[test]
+#[should_panic(expected = "destinations are frozen")]
+fn owner_cannot_redirect_margin_destination() {
+    let mut v = vault();
+    ctx("owner.near", 0, T0_MS);
+    v.set_config(Config { perp_evm_address: "0x2222222222222222222222222222222222222222".into(), ..cfg() });
+}
+
+#[test]
+fn owner_can_set_destination_once_and_tune_limits() {
+    ctx("owner.near", 0, T0_MS);
+    let mut v = Vault::new(acc("owner.near"), acc("usdc.near"), acc("eth.near"), acc("mpc.near"), vec![], None);
+    v.set_config(cfg());
+    v.set_config(Config { hedge_band_bps: 50, ..cfg() });
+    assert_eq!(v.get_config().hedge_band_bps, 50);
+}
