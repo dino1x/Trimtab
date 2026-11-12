@@ -19,6 +19,11 @@ enum Cmd {
         #[arg(long)]
         online: bool,
     },
+    /// MCP server on stdio for AI agents (quote_deposit, deposit_intent, position, receipt).
+    Mcp {
+        #[arg(long)]
+        online: bool,
+    },
     /// Run the backtest on the committed data and print the headline table.
     Backtest {
         #[arg(long)]
@@ -54,7 +59,7 @@ enum Cmd {
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let _ = dotenvy::dotenv();
-    tracing_subscriber::fmt().with_env_filter(tracing_subscriber::EnvFilter::from_default_env()).init();
+    tracing_subscriber::fmt().with_writer(std::io::stderr).with_env_filter(tracing_subscriber::EnvFilter::from_default_env()).init();
     match Cli::parse().cmd {
         Cmd::Serve { port, online } => {
             let state = api::AppState::new(online)?;
@@ -62,6 +67,9 @@ async fn main() -> anyhow::Result<()> {
             let listener = tokio::net::TcpListener::bind(("0.0.0.0", port)).await?;
             println!("keeper API (DEMO) on http://localhost:{port}/api/state");
             axum::serve(listener, api::router(state)).await?;
+        }
+        Cmd::Mcp { online } => {
+            keeper::mcp::serve_stdio(api::AppState::new(online)?).await?;
         }
         Cmd::Backtest { json } => {
             let r = backtest::default_report()?;
