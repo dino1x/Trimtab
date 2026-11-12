@@ -102,7 +102,7 @@ impl DemoVault {
         if s.rebalanced {
             self.push(s.t, "rebalance", format!("legs reset to {:.4} ETH each", s.spot_qty * self.scale));
         }
-        if self.step % self.tail.len() == 0 {
+        if self.step % self.tail.len() == 0 && self.events.last().map(|e| e.kind.as_str()) != Some("replay") {
             self.push(s.t, "replay", "7-day replay restarted".into());
         }
     }
