@@ -24,6 +24,12 @@ enum Cmd {
         #[arg(long)]
         json: bool,
     },
+    /// Daily receipt: vault vs US T-bills (backtest until live).
+    Receipt {
+        /// YYYY-MM-DD; default is the last day of the window.
+        #[arg(long)]
+        date: Option<String>,
+    },
     /// Re-download the hourly funding and spot data into ./data.
     FetchHistory,
     /// Ask 1Click for a dry quote (no deposit address, nothing moves).
@@ -64,6 +70,12 @@ async fn main() -> anyhow::Result<()> {
             } else {
                 print_report(&r);
             }
+        }
+        Cmd::Receipt { date } => {
+            let r = backtest::default_report()?;
+            let x = match date { Some(d) => keeper::receipt::on(&r, &d)?, None => keeper::receipt::latest(&r)? };
+            let y = keeper::receipt::year(&r)?;
+            println!("{}", serde_json::to_string_pretty(&serde_json::json!({"day": x, "year": y}))?);
         }
         Cmd::FetchHistory => {
             let (f, s) = data::fetch_history(std::path::Path::new("data"), "ETH", "ETHUSDT").await?;

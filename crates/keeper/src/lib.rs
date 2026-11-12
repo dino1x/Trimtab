@@ -7,6 +7,7 @@ pub mod data;
 pub mod demo;
 pub mod intents;
 pub mod live;
+pub mod receipt;
 pub mod mpc;
 pub mod strategy;
 pub mod venue;

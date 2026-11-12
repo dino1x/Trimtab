@@ -55,6 +55,7 @@ pub fn router(state: AppState) -> Router {
         .route("/api/state", get(state_h))
         .route("/api/backtest", get(backtest_h))
         .route("/api/market", get(market_h))
+        .route("/api/receipt", get(receipt_h))
         .route("/api/quote", get(quote_h))
         .route("/api/demo/deposit", post(deposit_h))
         .route("/api/demo/withdraw", post(withdraw_h))
@@ -67,6 +68,13 @@ async fn state_h(State(s): State<AppState>) -> Json<VaultSnapshot> {
 
 async fn backtest_h(State(s): State<AppState>) -> Json<Report> {
     Json((*s.report).clone())
+}
+
+async fn receipt_h(State(s): State<AppState>) -> (StatusCode, Json<Value>) {
+    match (crate::receipt::latest(&s.report), crate::receipt::year(&s.report)) {
+        (Ok(d), Ok(y)) => (StatusCode::OK, Json(json!({"day": d, "year": y}))),
+        _ => (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "receipt unavailable"}))),
+    }
 }
 
 async fn market_h(State(s): State<AppState>) -> (StatusCode, Json<Value>) {

@@ -27,7 +27,9 @@ pub async fn get_dash() -> Result<Dash, ServerFnError> {
     let state = use_context::<keeper::api::AppState>().ok_or_else(|| ServerFnError::new("keeper unavailable"))?;
     let snap: Snap = serde_json::from_value(serde_json::to_value(state.snapshot())?)?;
     let bt: Bt = serde_json::from_value(serde_json::to_value(&*state.report)?)?;
-    Ok(Dash { snap, bt })
+    let day: RcptDay = serde_json::from_value(serde_json::to_value(keeper::receipt::latest(&state.report).map_err(|e| ServerFnError::new(e.to_string()))?)?)?;
+    let year: RcptYear = serde_json::from_value(serde_json::to_value(keeper::receipt::year(&state.report).map_err(|e| ServerFnError::new(e.to_string()))?)?)?;
+    Ok(Dash { snap, bt, day, year })
 }
 
 #[server]
@@ -139,7 +141,7 @@ fn Home() -> impl IntoView {
                     <p class="eyebrow">"Backtest, labelled as such"</p>
                     <h2>"Twelve months, replayed hour by hour."</h2>
                     <Transition fallback=|| view! { <div class="big3 sk" style="height:140px"></div> }>
-                        {view_dash(|d| view! { <Proof bt=d.bt events=d.snap.events/> }.into_any())}
+                        {view_dash(|d| view! { <Proof bt=d.bt events=d.snap.events/><Receipt day=d.day year=d.year/> }.into_any())}
                     </Transition>
                 </div>
             </section>
@@ -384,5 +386,28 @@ fn Proof(bt: Bt, events: Vec<Ev>) -> impl IntoView {
                 }}
             </div>
         </div>
+    }
+}
+
+#[component]
+fn Receipt(day: RcptDay, year: RcptYear) -> impl IntoView {
+    let cents = |v: f64| format!("{}${:.2}", if v < 0.0 { "−" } else { "" }, v.abs());
+    view! {
+        <article class="receipt mono" aria-label="Daily receipt">
+            <header><span>"DAILY RECEIPT · BACKTEST"</span><span>{day.date.clone()}</span></header>
+            <dl>
+                <dt>"Deposit"</dt><dd>"$10,000.00"</dd>
+                <dt>"Funding received"</dt><dd>{cents(day.funding_usd)}</dd>
+                <dt>"Fees"</dt><dd>{cents(-day.fees_usd)}</dd>
+                <dt>"Vault earned"</dt><dd class="ok">{cents(day.earned_usd)}</dd>
+                <dt>{format!("T-bills at {:.3}%", day.benchmark_rate_pct)}</dt><dd>{cents(day.benchmark_earned_usd)}</dd>
+                <dt>"Difference"</dt><dd>{cents(day.difference_usd)}</dd>
+            </dl>
+            <p class="small">{format!(
+                "Whole year: vault {} vs T-bills {}. Ahead on {} of {} days and {} of {} months.",
+                cents(year.vault_earned_usd), cents(year.benchmark_earned_usd), year.days_vault_ahead, year.days, year.months_vault_ahead, year.months
+            )}</p>
+            <p class="small muted">"Benchmark: US Treasury, average interest rate on Treasury bills (Fiscal Data API)."</p>
+        </article>
     }
 }

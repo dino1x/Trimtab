@@ -103,6 +103,13 @@ h3{font-size:20px;letter-spacing:-.4px}
 .log h3{font-size:15px;margin-bottom:12px;color:var(--muted)}
 .log ul{list-style:none;display:flex;flex-direction:column;gap:8px}
 
+/* Receipt */
+.receipt{max-width:520px;margin:56px auto 0;background:var(--panel);border:1px dashed rgba(173,206,255,.28);border-radius:14px;padding:22px 24px;font-size:13px}
+.receipt header{display:flex;justify-content:space-between;color:var(--accent);font-size:12px;padding-bottom:12px;border-bottom:1px dashed var(--line);margin-bottom:12px}
+.receipt dl{display:grid;grid-template-columns:1fr auto;gap:8px 12px}
+.receipt dt{color:var(--dim)} .receipt dd{text-align:right}
+.receipt p{margin-top:14px;line-height:1.6}
+
 /* Dev */
 .eps{list-style:none;margin-top:24px;font-size:14px;display:flex;flex-direction:column;gap:10px}
 .eps span{display:inline-block;width:52px;color:var(--accent)}

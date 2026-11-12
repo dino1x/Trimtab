@@ -65,9 +65,33 @@ pub struct Bt {
 }
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq)]
+pub struct RcptDay {
+    pub date: String,
+    pub earned_usd: f64,
+    pub funding_usd: f64,
+    pub fees_usd: f64,
+    pub benchmark_rate_pct: f64,
+    pub benchmark_earned_usd: f64,
+    pub difference_usd: f64,
+    pub source: String,
+}
+
+#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq)]
+pub struct RcptYear {
+    pub vault_earned_usd: f64,
+    pub benchmark_earned_usd: f64,
+    pub days_vault_ahead: usize,
+    pub days: usize,
+    pub months_vault_ahead: usize,
+    pub months: usize,
+}
+
+#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq)]
 pub struct Dash {
     pub snap: Snap,
     pub bt: Bt,
+    pub day: RcptDay,
+    pub year: RcptYear,
 }
 
 pub fn fmt_usd(v: f64) -> String {

@@ -65,8 +65,20 @@ pub struct Report {
     pub nav_daily: Vec<(u64, f64)>,
     /// Last 7 days of hourly states, replayed by the demo vault.
     pub tail: Vec<Snapshot>,
+    /// Per-day NAV, funding and fees, for the daily receipt.
+    pub days: Vec<Day>,
     pub policy: Policy,
     pub costs: Costs,
+}
+
+/// One UTC day of the backtest.
+#[derive(Clone, Copy, Debug, Serialize)]
+pub struct Day {
+    pub t: u64,
+    pub nav_start: f64,
+    pub nav_end: f64,
+    pub funding: f64,
+    pub costs: f64,
 }
 
 #[derive(Clone, Copy, Debug, Serialize)]
@@ -93,8 +105,15 @@ pub fn run(hours: &[Hour], policy: Policy, costs: Costs, start_nav: f64) -> Repo
     let (mut peak, mut max_dd, mut max_drift, mut max_lev, mut min_mr) = (start_nav, 0.0f64, 0.0f64, 0.0f64, f64::MAX);
     let mut navs = Vec::with_capacity(hours.len());
     let mut snaps = Vec::with_capacity(hours.len());
+    let mut days: Vec<Day> = Vec::new();
+    let mut prev_nav = start_nav;
 
     for h in hours {
+        let day_t = h.t / 86_400_000 * 86_400_000;
+        if days.last().map(|d| d.t) != Some(day_t) {
+            days.push(Day { t: day_t, nav_start: prev_nav, nav_end: prev_nav, funding: 0.0, costs: 0.0 });
+        }
+        let (f_before, c_before) = (funding_income, costs_paid);
         let mark = h.px * (1.0 + h.premium);
         // Funding accrues on the open short for this hour.
         let f = short_qty * h.px * h.funding;
@@ -144,6 +163,11 @@ pub fn run(hours: &[Hour], policy: Policy, costs: Costs, start_nav: f64) -> Repo
             min_mr = min_mr.min(margin_eq / (short_qty * mark));
         }
         navs.push((h.t, nav));
+        prev_nav = nav;
+        let d = days.last_mut().unwrap();
+        d.nav_end = nav;
+        d.funding += funding_income - f_before;
+        d.costs += costs_paid - c_before;
         snaps.push(Snapshot {
             t: h.t,
             px: h.px,
@@ -193,6 +217,7 @@ pub fn run(hours: &[Hour], policy: Policy, costs: Costs, start_nav: f64) -> Repo
         months: months(hours, &navs),
         nav_daily: navs.iter().step_by(24).copied().collect(),
         tail: snaps[n.saturating_sub(168)..].to_vec(),
+        days,
         policy,
         costs,
     }
