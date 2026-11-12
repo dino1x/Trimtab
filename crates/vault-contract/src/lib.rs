@@ -102,7 +102,7 @@ impl Default for Config {
             epoch_secs: 3_600,
             max_rebalances_per_epoch: 6,
             max_turnover_bps: 5_000,
-            max_allocation_bps: 6_000,
+            max_allocation_bps: 2_500,
             max_nav_move_bps: 300,
             max_slippage_bps: 100,
             min_deposit: U128(1_000_000),
