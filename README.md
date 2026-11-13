@@ -1,5 +1,7 @@
 # Trimtab
 
+*Built at NEAR HACKATHON (Nov 1–14, 2026) · Track: Unstoppable DeFi (`defi`)*
+
 A savings vault for dollars that earns what perp traders pay to stay long, while ETH's price cancels out. A NEAR contract holds the limits on the bot that trades it.
 
 ## Try it in 60 seconds
