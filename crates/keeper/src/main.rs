@@ -52,6 +52,11 @@ enum Cmd {
         #[arg(long)]
         root_key: String,
     },
+    /// Keyless check of the NEAR testnet run: every logged transaction and the vault's live state.
+    Verify {
+        #[arg(long, default_value = keeper::verify::DEFAULT_RPC)]
+        rpc: String,
+    },
     /// One live keeper cycle (testnet, or mainnet with the explicit opt-in).
     Tick,
 }
@@ -106,6 +111,12 @@ async fn main() -> anyhow::Result<()> {
             let root = mpc::parse_near_secp_key(&root_key)?;
             let pk = mpc::derive_public_key(&root, &vault, &path)?;
             println!("0x{}", hex::encode(mpc::eth_address(&pk)));
+        }
+        Cmd::Verify { rpc } => {
+            let (pass, total) = keeper::verify::run(&rpc).await?;
+            if pass != total {
+                std::process::exit(1);
+            }
         }
         Cmd::Tick => {
             let cfg = live::LiveConfig::from_env()?;

@@ -23,3 +23,10 @@ REFUSED: keeper over-shorts by 1 NEAR (33% drift > 1% band)|keeper.trimtab-hk111
 keeper allocates 10 USDC to the margin leg (new hour: inside the 25%/hour cap)|keeper.trimtab-hk1113.testnet|vault.trimtab-hk1113.testnet.allocate|BJLxvAWahodb1gxL43P3byHmzicuGUSLYFEwxRGMSAVK|ok
 REFUSED: owner tries to redirect margin withdrawals to a new address|trimtab-hk1113.testnet|vault.trimtab-hk1113.testnet.set_config|6GuhpVAV9cJy3ohzTebTVM7BEAoRbicr4sdCvLRaBoUj|refused
 REFUSED: keeper moves 5 more USDC in the same hour (10+5 > 25% of NAV)|keeper.trimtab-hk1113.testnet|vault.trimtab-hk1113.testnet.allocate|23TZY7nopFimChwzNtoBeNAama9NARvmgfsZ5GnwuFZ3|refused
+alice withdraws 10 shares (paid from idle)|alice.trimtab-hk1113.testnet|vault.trimtab-hk1113.testnet.withdraw|9K8zPm1v3v19NjqmVhmY2F47aF7AVtvcvfGmqgSNQhi1|ok
+bob withdraws all 20 shares: idle 18.29 < 19.41, so it is queued|bob.trimtab-hk1113.testnet|vault.trimtab-hk1113.testnet.withdraw|DJHSZC5ueMSZ52s3JZCnExT9N9nw6x9esGzxqJcoBbc4|ok
+alice withdraws her last 20 shares: idle is short, so it is queued|alice.trimtab-hk1113.testnet|vault.trimtab-hk1113.testnet.withdraw|2mFwU8jekyz6KvnNjNYU4GciFQD39cZaMppC6bN95YQX|ok
+mint 21 test USDC to keeper (stands in for USDC returned from the legs)|trimtab-hk1113.testnet|usdc.fakes.testnet.mint|3kUVg3KHKp6jhuuAmJXckwg92iZ8ycgSLF21pGofNePh|ok
+keeper refills the vault with 21 USDC|keeper.trimtab-hk1113.testnet|usdc.fakes.testnet.ft_transfer_call|4NMpbmLYnZZeehFsnfXvBTd97E7xUhc4ZXSeXNjAtPWt|ok
+bob claims his queued withdrawal|bob.trimtab-hk1113.testnet|vault.trimtab-hk1113.testnet.claim|2XKd3xgDtMFBZdXqN8jJ2ffewzUu2Ze7vyQuWqzAp8bD|ok
+anyone can push alice's claim; paid to alice|bob.trimtab-hk1113.testnet|vault.trimtab-hk1113.testnet.claim|8VAYeXNb35MyyPAFEGXkFHLZW2JgNu7Mx1JAT7Efzk6p|ok

@@ -11,6 +11,7 @@ pub mod mcp;
 pub mod receipt;
 pub mod mpc;
 pub mod strategy;
+pub mod verify;
 pub mod venue;
 
 // The contract's pure modules, compiled into the keeper from the same files so
