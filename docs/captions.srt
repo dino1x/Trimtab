@@ -1,0 +1,36 @@
+1
+00:00:00,500 --> 00:00:09,451
+Trimtab is a USDC savings vault on NEAR that earns the funding rate perp traders pay to stay long, while the price of Ethereum cancels out.
+
+2
+00:00:10,500 --> 00:00:22,403
+It holds spot Ethereum and an equal short perp. The live gauge tracks net delta against a strict plus or minus 100 basis point band, replaying real market conditions in demo mode.
+
+3
+00:00:25,500 --> 00:00:36,204
+Here is where the yield comes from: a full year of real hourly funding rates. When the market is bullish, longs pay our short position. Every bar reflects historical data.
+
+4
+00:00:40,500 --> 00:00:55,067
+The daily receipt compares the vault against US Treasury bills on the same ten thousand dollars. Over the backtest year it earned 367 dollars versus 385 from T-bills. We report that transparently.
+
+5
+00:00:55,500 --> 00:01:05,939
+Deposits mint vault shares at net asset value per share calculated by the contract's own math. On mainnet this executes via one simple USDC transfer call.
+
+6
+00:01:10,500 --> 00:01:18,948
+Users connect any NEAR wallet seamlessly through the standard NEAR Wallet Selector, maintaining non-custodial ownership of their funds.
+
+7
+00:01:20,500 --> 00:01:35,427
+Now we run our adversarial test suite. A rogue keeper key attempts to over-short, trade off market, replay nonces, and inflate NAV. Nineteen distinct attacks run on a real NEAR sandbox, and all nineteen are refused.
+
+8
+00:01:45,000 --> 00:01:56,135
+Intents builds both legs from the contract, and Chain Signatures lets the smart contract own the perp key without any hot wallet. The contract enforces every risk boundary.
+
+9
+00:01:55,500 --> 00:01:59,891
+Trimtab. Delta-neutral yield on NEAR. Open source on GitHub.
+
