@@ -54,8 +54,9 @@ enum Cmd {
     },
     /// Keyless check of the NEAR testnet run: every logged transaction and the vault's live state.
     Verify {
-        #[arg(long, default_value = keeper::verify::DEFAULT_RPC)]
-        rpc: String,
+        /// RPC endpoints to try in order (repeatable). Defaults to five public testnet RPCs.
+        #[arg(long)]
+        rpc: Vec<String>,
     },
     /// One live keeper cycle (testnet, or mainnet with the explicit opt-in).
     Tick,
@@ -113,9 +114,13 @@ async fn main() -> anyhow::Result<()> {
             println!("0x{}", hex::encode(mpc::eth_address(&pk)));
         }
         Cmd::Verify { rpc } => {
-            let (pass, total) = keeper::verify::run(&rpc).await?;
-            if pass != total {
+            let urls = if rpc.is_empty() { keeper::verify::DEFAULT_RPCS.iter().map(|s| s.to_string()).collect() } else { rpc };
+            let t = keeper::verify::run(urls).await?;
+            // 1 = the chain contradicts a claim; 2 = some checks could not reach the chain.
+            if t.fail > 0 {
                 std::process::exit(1);
+            } else if t.unreachable > 0 {
+                std::process::exit(2);
             }
         }
         Cmd::Tick => {

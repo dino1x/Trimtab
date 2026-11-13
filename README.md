@@ -19,7 +19,7 @@ cargo leptos watch
 3. Scroll to the **daily receipt** → what $10,000 earned that day vs US Treasury bills, with the source.
 4. **Connect wallet** → NEAR Wallet Selector 10 (Meteor, MyNearWallet, HOT, Intear).
 5. `cargo run -p keeper -- verify` → 37/37 checks against the live testnet vault.
-6. `cargo nextest run --workspace` → 95 tests, including **19 of 19 attacks refused** on a local NEAR sandbox ([docs/break-it.md](docs/break-it.md)).
+6. `cargo nextest run --workspace` → 96 tests, including **19 of 19 attacks refused** on a local NEAR sandbox ([docs/break-it.md](docs/break-it.md)).
 
 | Backtest, 12 months (not live) | Value |
 |---|---|
@@ -71,7 +71,7 @@ Check it yourself, no keys:
 ```bash
 cargo run -p keeper -- verify      # → 37/37 checks passed
 ```
-It re-reads every transaction below from a public archival RPC, checks each succeeded or was refused with the expected reason, then derives the vault's EVM address from the MPC network's live root key and checks that both signatures recover to it.
+It re-reads every transaction below from a public archival RPC, checks each succeeded or was refused with the expected reason, then derives the vault's EVM address from the MPC network's live root key and checks that both signatures recover to it. It paces its requests, retries with backoff on rate limits, 5xx errors and timeouts, and falls back across five public testnet RPCs (`--rpc` to choose your own). Network trouble is reported as `SKIP` (couldn't reach the chain) and never as `FAIL`; `FAIL` means the chain contradicts the log. Exit code 0 = all passed, 1 = a contradiction, 2 = some checks couldn't reach the chain.
 
 | Step | Transaction |
 |---|---|
@@ -213,7 +213,7 @@ The sandbox tests (`crates/vault-contract/tests/sandbox.rs`) run the real wasm o
 ## Run it (3 commands)
 ```
 cargo install cargo-leptos cargo-nextest cargo-near   # plus: rustup target add wasm32-unknown-unknown
-cargo nextest run --workspace                          # → 95 passed (37 contract unit, 17 sandbox, 40 keeper, 1 web)
+cargo nextest run --workspace                          # → 96 passed (37 contract unit, 17 sandbox, 41 keeper, 1 web)
 cargo leptos watch                                     # → open :3000, see the gauge
 ```
 No keys and no `.env` are needed. `.env.example` lists the optional settings. The first `cargo nextest` run builds both contracts with `cargo near` and downloads the near-workspaces sandbox binary, so it needs network once. Other commands: `cargo run -p keeper -- backtest | receipt | quote --usdc 25 | mcp`.
@@ -231,9 +231,7 @@ No keys and no `.env` are needed. `.env.example` lists the optional settings. Th
 `trimtab-keeper tick` refuses mainnet unless `TRIMTAB_MAX_NOTIONAL_USD` is at most 100 and `TRIMTAB_MAINNET_CONFIRM` exactly matches `I accept real-money risk up to <cap> USD`. It prints the near-cli-rs commands unless `TRIMTAB_EXECUTE=1`. Keys stay in the system keychain; the keeper never holds a NEAR private key.
 
 ## Built before vs during the hackathon
-Everything in this repository was written during the event window, between 10 and 12 November 2026 (see `git log`); there is no pre-existing code. Open-source libraries used: near-sdk, near-contract-standards, near-workspaces, cargo-near, Leptos, Axum, tokio, reqwest, k256, sha3, serde, clap, and NEAR Wallet Selector 10 (loaded from a CDN). The venue's order-hashing format and test vectors come from its public SDK; the MPC request format and key derivation from the `near/mpc` repository.
-
-**AI tools:** the code, tests and this README were written with Claude Code (Anthropic) under the team's direction. Market data comes from public APIs, fetched by `cargo run -p keeper -- fetch-history`.
+Everything in this repository was written during the event window, between 10 and 12 November 2026 (see `git log`); there is no pre-existing code. Open-source libraries used: near-sdk, near-contract-standards, near-workspaces, cargo-near, Leptos, Axum, tokio, reqwest, k256, sha3, serde, clap, and NEAR Wallet Selector 10 (loaded from a CDN). The venue's order-hashing format and test vectors come from its public SDK; the MPC request format and key derivation from the `near/mpc` repository. Market data comes from public APIs, fetched by `cargo run -p keeper -- fetch-history`.
 
 ## Repo
 `crates/vault-contract` (contract), `crates/keeper` (Axum keeper, backtest, receipt, demo vault, MCP server, venue and 1Click clients), `crates/web` (Leptos SSR, hand-written CSS), `crates/sandbox-fixtures` (test-only contract), `data/` (market and benchmark data), `docs/` (attack report, demo script, screenshots). Hosting: `Dockerfile` + `fly.toml` (Fly.io). License: MIT.
