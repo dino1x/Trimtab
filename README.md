@@ -18,7 +18,8 @@ cargo leptos watch
 2. **Deposit** card: type `alice.near` and `250`, press **Deposit to demo vault** → minted shares, computed by the contract's own share math (`crates/vault-contract/src/math.rs`).
 3. Scroll to the **daily receipt** → what $10,000 earned that day vs US Treasury bills, with the source.
 4. **Connect wallet** → NEAR Wallet Selector 10 (Meteor, MyNearWallet, HOT, Intear).
-5. `cargo nextest run --workspace` → 93 tests, including **19 of 19 attacks refused** on a local NEAR sandbox ([docs/break-it.md](docs/break-it.md)).
+5. `cargo run -p keeper -- verify` → 37/37 checks against the live testnet vault.
+6. `cargo nextest run --workspace` → 95 tests, including **19 of 19 attacks refused** on a local NEAR sandbox ([docs/break-it.md](docs/break-it.md)).
 
 | Backtest, 12 months (not live) | Value |
 |---|---|
@@ -28,7 +29,7 @@ cargo leptos watch
 | Max drawdown | 0.26% |
 | Final net delta | 0.000% |
 | vs US T-bills, same $10,000, same year | $367.17 vs $385.41: ahead on 197 of 365 days, 7 of 12 months, **behind over the year** |
-| Vault account | not deployed yet: no mainnet or testnet account was provided |
+| Vault account | [`vault.trimtab-hk1113.testnet`](https://testnet.nearblocks.io/address/vault.trimtab-hk1113.testnet) (testnet; not on mainnet) |
 
 *Backtest = real hourly ETH funding from the perp venue and real hourly ETH spot prices, 1 Nov 2025 to 31 Oct 2026 (8,759 hours), run through the keeper's own rebalance code with simulated execution and fees. It is not a record of live trading. Hedge drift is zero in the backtest because both legs are assumed to fill in the same hour at equal size; live drift comes from 1Click settlement time (about 20 s per quote) and the venue lot size, and the contract caps it at ±100 bps (I2). On $10,000 the year earned $478.71 of funding, paid $104.36 in fees and lost $7.18 to basis. Regenerate with `cargo run -p keeper -- backtest`; the test `readme_matches_backtest` fails if this table drifts from the code.*
 
@@ -46,6 +47,7 @@ cargo leptos watch
 
 | | What | Evidence |
 |---|---|---|
+| ✅ | **Live on NEAR testnet:** deposits and withdrawals from 2 accounts, hedge order and in-band rebalance signed by the real Chain Signatures network, 3 refused attacks; `verify` re-checks 37/37 with no keys | [Live on NEAR testnet](#live-on-near-testnet), [`docs/testnet-run.log`](docs/testnet-run.log) |
 | ✅ | Vault contract: shares, hedge band, drawdown stop, keeper allowlist, pause/unwind, epoch caps, frozen payout destinations | [`lib.rs`](crates/vault-contract/src/lib.rs), 37 unit tests, 17 sandbox tests |
 | ✅ | 19 of 19 attacks refused on a local NEAR sandbox | [`docs/break-it.md`](docs/break-it.md), test `break_it_every_attack_is_refused` |
 | ✅ | Perp orders hashed inside the contract, byte-exact with the venue's published test vectors | `hl::tests::connection_id_matches_reference_vector`, `mpc::tests::venue_order_signature_matches_reference_vector` |
@@ -53,13 +55,49 @@ cargo leptos watch
 | ✅ | 12-month backtest on real hourly data; daily receipt vs US T-bills from Treasury data | [`backtest.rs`](crates/keeper/src/backtest.rs), [`receipt.rs`](crates/keeper/src/receipt.rs), [`data/`](data) |
 | ✅ | Live reads: 1Click `dry: true` quotes and the venue's funding rate | `cargo run -p keeper -- quote`, `GET /api/market` with `TRIMTAB_ONLINE=1` |
 | ✅ | MCP server for AI agents (stdio) | [`mcp.rs`](crates/keeper/src/mcp.rs), 4 tests |
-| ⚠️ | Wallet connects (Wallet Selector 10), but a real deposit needs a deployed vault | [`wallet.js`](crates/web/public/wallet.js) |
-| ⚠️ | Live keeper loop prints the transactions it would send; it has not sent any | [`live.rs`](crates/keeper/src/live.rs) |
+| ⚠️ | Wallet connects (Wallet Selector 10); the web page still shows the demo vault, not the testnet one | [`wallet.js`](crates/web/public/wallet.js) |
+| ⚠️ | The testnet run was driven by near-cli commands, logged in [`docs/testnet-run.log`](docs/testnet-run.log); the automated keeper loop (`tick`) has not sent transactions itself | [`live.rs`](crates/keeper/src/live.rs) |
+| ⚠️ | On testnet the 1Click fills and the perp venue are simulated: there is no 1Click or bridged ETH on testnet, so the spot leg is wNEAR delivered by the keeper, and signed orders are not posted to the venue | [Live on NEAR testnet](#live-on-near-testnet) |
 | ⚠️ | Live keeper places the perp side of a trim; the paired spot sale (`request_paired_reduce`) exists in the contract and backtest but is not yet called by the live loop | `i2_paired_reduce_keeps_legs_matched` |
-| ❌ | Testnet deployment | `scripts/deploy-testnet.sh` is ready; needs an account |
-| ❌ | Any mainnet transaction, real order on the venue, or real deposit | none yet |
+| ❌ | Any mainnet transaction, real order on the venue, or real-money deposit | none yet |
 | ❌ | Hosted demo | `Dockerfile` + `fly.toml` ready; not deployed |
 | ❌ | Audit | unaudited hackathon code |
+
+## Live on NEAR testnet
+
+Vault [`vault.trimtab-hk1113.testnet`](https://testnet.nearblocks.io/address/vault.trimtab-hk1113.testnet), keeper `keeper.trimtab-hk1113.testnet`, depositors `alice.` and `bob.trimtab-hk1113.testnet`. Test USDC is `usdc.fakes.testnet` (public mint, 6 decimals); the spot leg is `wrap.testnet` (wNEAR), because bridged ETH and 1Click don't exist on testnet. Signatures come from the real testnet MPC contract `v1.signer-prod.testnet`.
+
+Check it yourself, no keys:
+```bash
+cargo run -p keeper -- verify      # → 37/37 checks passed
+```
+It re-reads every transaction below from a public archival RPC, checks each succeeded or was refused with the expected reason, then derives the vault's EVM address from the MPC network's live root key and checks that both signatures recover to it.
+
+| Step | Transaction |
+|---|---|
+| Deploy and initialise the vault | [J4wp5X…](https://testnet.nearblocks.io/txns/J4wp5XAjvkjSWmzXSs564ZKcu1tTg5ypW8wa55PS8u3s) |
+| Alice deposits 30 USDC → 30 shares | [2uJH8W…](https://testnet.nearblocks.io/txns/2uJH8WQB4zZH21vX15xfoJsm2cPTDMRnfumcd2C2qVk8) |
+| Bob deposits 20 USDC → 20 shares | [DEwxjJ…](https://testnet.nearblocks.io/txns/DEwxjJUfa7pjborzDUZieoXfpLJ75RkMYhjuXwhv7kie) |
+| Keeper allocates 12 USDC to the spot leg (to a stand-in 1Click deposit address) | [3QXGvb…](https://testnet.nearblocks.io/txns/3QXGvbCMJzJnPTx877uYfkQqVVVtFzEhJs87hdQejrtF) |
+| Simulated fill: 3 wNEAR delivered to the vault | [CgTBHW…](https://testnet.nearblocks.io/txns/CgTBHWi7MT5ibhQrZW9UhSFWvB29Jf9QtbWDdcb8bt2M) |
+| Vault reads its spot leg from the token contract | [FE7srE…](https://testnet.nearblocks.io/txns/FE7srEP3bBTwq7emrxPaDG2KS2LNxHvkWNNjaLShXyJj) |
+| Keeper reports the venue's real NEAR mark (3.50188) | [DT6LFp…](https://testnet.nearblocks.io/txns/DT6LFp7FiaSeqNQnSMVJShmxJfHkGT2LnCA1A4qZuD5g) |
+| **Hedge: short 3 NEAR, digest built by the contract, signed by Chain Signatures** | [HeKu9o…](https://testnet.nearblocks.io/txns/HeKu9onMpWr61N8WdtbyBQcFU5a1gToEUotQxWVXXXTR) |
+| **Rebalance inside the band: buy back 0.02 NEAR (drift 0.67%), signed** | [147uZU…](https://testnet.nearblocks.io/txns/147uZU53j1gJx1TiYJoznMWMsJkUoEkMZFme5kLfw1Ta) |
+| ⛔ Refused: keeper over-shorts by 1 NEAR (`order breaks the hedge band`) | [B2aCvY…](https://testnet.nearblocks.io/txns/B2aCvYtVYTWDqJY2vanGc9jzJHF8bPM3BDosPJ9xV3SH) |
+| Keeper allocates 10 USDC to margin (new hour, inside the 25%/hour cap) | [BJLxvA…](https://testnet.nearblocks.io/txns/BJLxvAWahodb1gxL43P3byHmzicuGUSLYFEwxRGMSAVK) |
+| ⛔ Refused: 5 more USDC in the same hour (`epoch allocation limit`) | [23TZY7…](https://testnet.nearblocks.io/txns/23TZY7nopFimChwzNtoBeNAama9NARvmgfsZ5GnwuFZ3) |
+| ⛔ Refused: owner redirects margin withdrawals (`destinations are frozen`) | [6Guhp…](https://testnet.nearblocks.io/txns/6GuhpVAV9cJy3ohzTebTVM7BEAoRbicr4sdCvLRaBoUj) |
+| Alice withdraws 10 shares, paid at once | [9K8zPm…](https://testnet.nearblocks.io/txns/9K8zPm1v3v19NjqmVhmY2F47aF7AVtvcvfGmqgSNQhi1) |
+| Bob withdraws 20 shares: idle was short, so it queued | [DJHSZC…](https://testnet.nearblocks.io/txns/DJHSZC5ueMSZ52s3JZCnExT9N9nw6x9esGzxqJcoBbc4) |
+| Alice withdraws her last 20 shares: queued | [2mFwU8…](https://testnet.nearblocks.io/txns/2mFwU8jekyz6KvnNjNYU4GciFQD39cZaMppC6bN95YQX) |
+| Keeper refills 21 USDC | [4NMpbm…](https://testnet.nearblocks.io/txns/4NMpbmLYnZZeehFsnfXvBTd97E7xUhc4ZXSeXNjAtPWt) |
+| Bob's claim paid | [2XKd3x…](https://testnet.nearblocks.io/txns/2XKd3xgDtMFBZdXqN8jJ2ffewzUu2Ze7vyQuWqzAp8bD) |
+| Alice's claim paid (pushed by Bob; the money goes to Alice) | [8VAYeX…](https://testnet.nearblocks.io/txns/8VAYeXNb35MyyPAFEGXkFHLZW2JgNu7Mx1JAT7Efzk6p) |
+
+All 32 logged transactions, including token registrations and mints, are in [`docs/testnet-run.log`](docs/testnet-run.log). The vault's Chain Signatures EVM address for path `trimtab-perp-1` is `0x0fd96f5c2f4289f9426e52266d987ff6101757ea`.
+
+**What this proves:** share accounting, queued withdrawals, the hedge band, the hourly cap and the frozen destinations work on a public NEAR network, and a NEAR contract can get a perp order signed by the MPC network only after its own checks. **What it doesn't:** no order was posted to the perp venue, no 1Click swap ran, and the money is test tokens. Alice ended 0.88 and Bob 0.59 test USDC down, because the simulated spot fill (3 NEAR at the real 3.50 mark = 10.51) was worth less than the 12 USDC allocated, and the vault reports that loss honestly.
 
 ## What is real vs simulated
 
@@ -175,7 +213,7 @@ The sandbox tests (`crates/vault-contract/tests/sandbox.rs`) run the real wasm o
 ## Run it (3 commands)
 ```
 cargo install cargo-leptos cargo-nextest cargo-near   # plus: rustup target add wasm32-unknown-unknown
-cargo nextest run --workspace                          # → 93 passed (37 contract unit, 17 sandbox, 38 keeper, 1 web)
+cargo nextest run --workspace                          # → 95 passed (37 contract unit, 17 sandbox, 40 keeper, 1 web)
 cargo leptos watch                                     # → open :3000, see the gauge
 ```
 No keys and no `.env` are needed. `.env.example` lists the optional settings. The first `cargo nextest` run builds both contracts with `cargo near` and downloads the near-workspaces sandbox binary, so it needs network once. Other commands: `cargo run -p keeper -- backtest | receipt | quote --usdc 25 | mcp`.
@@ -183,8 +221,8 @@ No keys and no `.env` are needed. `.env.example` lists the optional settings. Th
 ## NEAR components
 | Component | Used for | Transaction |
 |---|---|---|
-| Rust contract (near-sdk 5.30.1, cargo-near 0.23) | Shares, guardrails, order hashing | Sandbox only so far; `scripts/deploy-testnet.sh` deploys once an account is provided |
-| Chain Signatures (`v1.signer`) | Signs perp orders, the bridge deposit and margin withdrawals for the vault's derived EVM key | Sandbox: stand-in signer; live: none yet |
+| Rust contract (near-sdk 5.30.1, cargo-near 0.23) | Shares, guardrails, order hashing | Testnet: [deploy](https://testnet.nearblocks.io/txns/J4wp5XAjvkjSWmzXSs564ZKcu1tTg5ypW8wa55PS8u3s); mainnet: none |
+| Chain Signatures (`v1.signer`; testnet `v1.signer-prod.testnet`) | Signs perp orders, the bridge deposit and margin withdrawals for the vault's derived EVM key | Testnet: [hedge order](https://testnet.nearblocks.io/txns/HeKu9onMpWr61N8WdtbyBQcFU5a1gToEUotQxWVXXXTR), [rebalance](https://testnet.nearblocks.io/txns/147uZU53j1gJx1TiYJoznMWMsJkUoEkMZFme5kLfw1Ta) |
 | NEAR Intents 1Click | USDC → spot ETH on NEAR; USDC → settlement-chain USDC for margin | `dry: true` quotes only (`/api/quote`) |
 | NEP-141 USDC (`17208628…a1`) and `eth.bridge.near` | Deposit asset and spot leg | — |
 | NEAR Wallet Selector 10 | Connect wallet (`crates/web/public/wallet.js`) | — |
