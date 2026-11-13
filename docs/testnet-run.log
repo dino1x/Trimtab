@@ -1,0 +1,25 @@
+deploy+init vault|trimtab-hk1113.testnet|vault.trimtab-hk1113.testnet.new|J4wp5XAjvkjSWmzXSs564ZKcu1tTg5ypW8wa55PS8u3s|ok
+register vault.trimtab-hk1113.testnet in test USDC|trimtab-hk1113.testnet|usdc.fakes.testnet.storage_deposit|8fW1t9p4XHbnCBvEhUuPgzy3tphqYaAn3NXEmjg9bFAi|ok
+register alice.trimtab-hk1113.testnet in test USDC|trimtab-hk1113.testnet|usdc.fakes.testnet.storage_deposit|H4N42tACUG7bP6pSRMGoprQZBrrFxw6KrnuHo1iRE3Sx|ok
+register bob.trimtab-hk1113.testnet in test USDC|trimtab-hk1113.testnet|usdc.fakes.testnet.storage_deposit|B8KyXTZzEasxMkGEsUCcw3kEHeJy1R6j5JCSHvERAhMf|ok
+register keeper.trimtab-hk1113.testnet in test USDC|trimtab-hk1113.testnet|usdc.fakes.testnet.storage_deposit|3cwbihsVF94JsA1skWBsgpQqBoNtaxHQZHoDv65zwTQw|ok
+register 8637bf54343f6cd7c263391de19da18698cd95d0003b03d9e4ed0964ae216632 in test USDC|trimtab-hk1113.testnet|usdc.fakes.testnet.storage_deposit|FrfETHcVWBCsH97juPV3i2XwpHLWYTWW7FotTLgv1wRZ|ok
+register vault.trimtab-hk1113.testnet in wNEAR|trimtab-hk1113.testnet|wrap.testnet.storage_deposit|94Qhb7rC2ZZciYJJiRcycfvUjD21ydSeyp8yAVYdbn9A|ok
+register keeper.trimtab-hk1113.testnet in wNEAR|trimtab-hk1113.testnet|wrap.testnet.storage_deposit|3LtLbq7xYWaZKtJLpbv9HHMazwfeVffQZTGv6PMgMSjx|ok
+register 8637bf54343f6cd7c263391de19da18698cd95d0003b03d9e4ed0964ae216632 in wNEAR|trimtab-hk1113.testnet|wrap.testnet.storage_deposit|DhNxibpSrxKacVLM2V8i9nbRnqtNJJyDKSrhAzaVvjEC|ok
+mint 1000 test USDC to alice|trimtab-hk1113.testnet|usdc.fakes.testnet.mint|7dqwyq1KGkrDYiDMvX6khxcyRYhg5yYMmp2TBZob2Aq9|ok
+mint 1000 test USDC to bob|trimtab-hk1113.testnet|usdc.fakes.testnet.mint|7PagtBbpD62ncP5rrY3yBfmuYQ27Vp7wZvZb4vE1gfk1|ok
+alice deposits 30 USDC|alice.trimtab-hk1113.testnet|usdc.fakes.testnet.ft_transfer_call|2uJH8WQB4zZH21vX15xfoJsm2cPTDMRnfumcd2C2qVk8|ok
+bob deposits 20 USDC|bob.trimtab-hk1113.testnet|usdc.fakes.testnet.ft_transfer_call|DEwxjJUfa7pjborzDUZieoXfpLJ75RkMYhjuXwhv7kie|ok
+fund keeper 3.3 NEAR|trimtab-hk1113.testnet|keeper|8tYPb8jwCu1j5kasMicvUPYwkwAmxsNM9nb1XW5rL7rw|ok
+keeper allocates 12 USDC to the spot leg (1Click deposit address, simulated)|keeper.trimtab-hk1113.testnet|vault.trimtab-hk1113.testnet.allocate|3QXGvbCMJzJnPTx877uYfkQqVVVtFzEhJs87hdQejrtF|ok
+simulated 1Click fill: keeper wraps 3 NEAR|keeper.trimtab-hk1113.testnet|wrap.testnet.near_deposit|61h34UfrJZeRX94Be3eDinX4F17H1NVGHvb2RhSqpKqe|ok
+simulated 1Click fill: 3 wNEAR delivered to the vault|keeper.trimtab-hk1113.testnet|wrap.testnet.ft_transfer|CgTBHWi7MT5ibhQrZW9UhSFWvB29Jf9QtbWDdcb8bt2M|ok
+vault reads its spot balance from wrap.testnet|keeper.trimtab-hk1113.testnet|vault.trimtab-hk1113.testnet.sync_spot|FE7srEP3bBTwq7emrxPaDG2KS2LNxHvkWNNjaLShXyJj|ok
+keeper reports spot value at the venue's NEAR mark (3.50188)|keeper.trimtab-hk1113.testnet|vault.trimtab-hk1113.testnet.report|DT6LFp7FiaSeqNQnSMVJShmxJfHkGT2LnCA1A4qZuD5g|ok
+hedge: short 3 NEAR, signed by the testnet MPC network|keeper.trimtab-hk1113.testnet|vault.trimtab-hk1113.testnet.request_perp_order|HeKu9onMpWr61N8WdtbyBQcFU5a1gToEUotQxWVXXXTR|ok
+rebalance inside the band: buy back 0.02 NEAR (drift 0.67% < 1%)|keeper.trimtab-hk1113.testnet|vault.trimtab-hk1113.testnet.request_perp_order|147uZU53j1gJx1TiYJoznMWMsJkUoEkMZFme5kLfw1Ta|ok
+REFUSED: keeper over-shorts by 1 NEAR (33% drift > 1% band)|keeper.trimtab-hk1113.testnet|vault.trimtab-hk1113.testnet.request_perp_order|B2aCvYtVYTWDqJY2vanGc9jzJHF8bPM3BDosPJ9xV3SH|refused
+keeper allocates 10 USDC to the margin leg (new hour: inside the 25%/hour cap)|keeper.trimtab-hk1113.testnet|vault.trimtab-hk1113.testnet.allocate|BJLxvAWahodb1gxL43P3byHmzicuGUSLYFEwxRGMSAVK|ok
+REFUSED: owner tries to redirect margin withdrawals to a new address|trimtab-hk1113.testnet|vault.trimtab-hk1113.testnet.set_config|6GuhpVAV9cJy3ohzTebTVM7BEAoRbicr4sdCvLRaBoUj|refused
+REFUSED: keeper moves 5 more USDC in the same hour (10+5 > 25% of NAV)|keeper.trimtab-hk1113.testnet|vault.trimtab-hk1113.testnet.allocate|23TZY7nopFimChwzNtoBeNAama9NARvmgfsZ5GnwuFZ3|refused
