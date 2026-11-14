@@ -2,6 +2,8 @@
 
 *Built at NEAR HACKATHON (Nov 1–14, 2026) · Track: Unstoppable DeFi (`defi`)*
 
+**Demo:** no hosted site. Run it locally with the two commands below, or watch the 2-minute walkthrough: [docs/demo.mp4](docs/demo.mp4) (captions in [docs/captions.srt](docs/captions.srt)).
+
 A savings vault for dollars that earns what perp traders pay to stay long, while ETH's price cancels out. A NEAR contract holds the limits on the bot that trades it.
 
 ## Try it in 60 seconds
@@ -216,7 +218,7 @@ cargo install cargo-leptos cargo-nextest cargo-near   # plus: rustup target add 
 cargo nextest run --workspace                          # → 96 passed (37 contract unit, 17 sandbox, 41 keeper, 1 web)
 cargo leptos watch                                     # → open :3000, see the gauge
 ```
-No keys and no `.env` are needed. `.env.example` lists the optional settings. The first `cargo nextest` run builds both contracts with `cargo near` and downloads the near-workspaces sandbox binary, so it needs network once. Other commands: `cargo run -p keeper -- backtest | receipt | quote --usdc 25 | mcp`.
+No keys and no `.env` are needed. `.env.example` lists the optional settings. The first `cargo nextest` run compiles the whole workspace (about 20 minutes on a laptop with a cold `target/`), builds both contracts with `cargo near`, and downloads the near-workspaces sandbox binary, so it needs network once. If that download is blocked, point `NEAR_SANDBOX_BIN_PATH` at an existing `near-sandbox` binary. Other commands: `cargo run -p keeper -- backtest | receipt | quote --usdc 25 | mcp`.
 
 ## NEAR components
 | Component | Used for | Transaction |
@@ -231,7 +233,7 @@ No keys and no `.env` are needed. `.env.example` lists the optional settings. Th
 `trimtab-keeper tick` refuses mainnet unless `TRIMTAB_MAX_NOTIONAL_USD` is at most 100 and `TRIMTAB_MAINNET_CONFIRM` exactly matches `I accept real-money risk up to <cap> USD`. It prints the near-cli-rs commands unless `TRIMTAB_EXECUTE=1`. Keys stay in the system keychain; the keeper never holds a NEAR private key.
 
 ## Built before vs during the hackathon
-Everything in this repository was written during the event window, between 10 and 12 November 2026 (see `git log`); there is no pre-existing code. Open-source libraries used: near-sdk, near-contract-standards, near-workspaces, cargo-near, Leptos, Axum, tokio, reqwest, k256, sha3, serde, clap, and NEAR Wallet Selector 10 (loaded from a CDN). The venue's order-hashing format and test vectors come from its public SDK; the MPC request format and key derivation from the `near/mpc` repository. Market data comes from public APIs, fetched by `cargo run -p keeper -- fetch-history`.
+Everything in this repository was written during the event window, between 10 and 14 November 2026 (see `git log`); there is no pre-existing code. Open-source libraries used: near-sdk, near-contract-standards, near-workspaces, cargo-near, Leptos, Axum, tokio, reqwest, k256, sha3, serde, clap, and NEAR Wallet Selector 10 (loaded from a CDN). The venue's order-hashing format and test vectors come from its public SDK; the MPC request format and key derivation from the `near/mpc` repository. Market data comes from public APIs, fetched by `cargo run -p keeper -- fetch-history`.
 
 ## Repo
 `crates/vault-contract` (contract), `crates/keeper` (Axum keeper, backtest, receipt, demo vault, MCP server, venue and 1Click clients), `crates/web` (Leptos SSR, hand-written CSS), `crates/sandbox-fixtures` (test-only contract), `data/` (market and benchmark data), `docs/` (attack report, demo script, screenshots). Hosting: `Dockerfile` + `fly.toml` (Fly.io). License: MIT.
